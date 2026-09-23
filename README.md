@@ -25,6 +25,7 @@
 - **前端**：HTML / CSS / JavaScript
 
 ## 项目结构
+```
 muduo-chat-server-web/
 ├── src/ # 服务端代码
 │ ├── main.cc # 入口
@@ -39,6 +40,7 @@ muduo-chat-server-web/
 │ └── app.js # 前端逻辑
 ├── Makefile
 └── README.md
+```
 
 ## 编译运行
 
