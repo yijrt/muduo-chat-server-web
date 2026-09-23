@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>聊天室</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="app">
+        <!-- 登录区域 -->
+        <div id="login-area">
+            <div class="container">
+                <h1>💬 聊天室</h1>
+                <div class="login-box">
+                    <h2>登录 / 注册</h2>
+                    <div class="input-group">
+                        <label>用户名</label>
+                        <input type="text" id="login-username" placeholder="请输入用户名">
+                    </div>
+                    <div class="input-group">
+                        <label>密码</label>
+                        <input type="password" id="login-password" placeholder="请输入密码">
+                    </div>
+                    <div class="button-group">
+                        <button class="btn-primary" onclick="doLogin()">登 录</button>
+                        <button class="btn-secondary" onclick="doRegister()">注 册</button>
+                    </div>
+                    <div id="login-error" class="error"></div>
+                    <div class="info">
+                        <span id="server-status">⏳ 连接中...</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 聊天区域 -->
+        <div id="chat-area" style="display:none;">
+            <div class="container">
+                <div class="chat-header">
+                    <h1>💬 聊天室</h1>
+                    <div class="user-info">
+                        <span>👤 <span id="current-user"></span></span>
+                        <button class="btn-logout" onclick="doLogout()">退出</button>
+                    </div>
+                </div>
+                <div class="chat-body">
+                    <div class="user-list" id="user-list">
+                        <h3>在线用户</h3>
+                        <ul id="online-users"></ul>
+                    </div>
+                    <div class="chat-main">
+                        <div id="messages" class="messages"></div>
+                        <div class="input-area">
+                            <input type="text" id="msg-input" placeholder="输入消息..." onkeydown="if(event.key==='Enter') sendMessage()">
+                            <input type="text" id="to-input" placeholder="发送给 (留空=自己)" value="test456">
+                            <button class="btn-primary" onclick="sendMessage()">发送</button>
+                            <button class="btn-secondary" onclick="loadHistory()">刷新</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
