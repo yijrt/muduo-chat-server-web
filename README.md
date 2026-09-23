@@ -52,14 +52,16 @@ muduo-chat-server-web/
 - Redis
 - jsoncpp、hiredis、libmariadb-dev
 
-### 编译
+## 编译
 
 ```bash
 make
 ./bin/chat_server
-TCP 服务：127.0.0.1:8888（telnet 访问）
+```
 
-HTTP 服务：127.0.0.1:8080（浏览器访问）
+- TCP 服务：127.0.0.1:8888（telnet 访问）
+- HTTP 服务：127.0.0.1:8080（浏览器访问）
 
-###作者
-GitHub: @yjrt
+## 作者
+
+GitHub: [@yjrt](https://github.com/yjrt)
