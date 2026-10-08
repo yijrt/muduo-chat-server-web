@@ -6,6 +6,8 @@
 #include <muduo/net/InetAddress.h>
 #include <muduo/base/Logging.h>
 
+#include <json/json.h>          // 新增：makeResponse 按值返回 Json::Value，需完整定义
+
 #include "common.h"
 
 #include <unordered_map>
@@ -46,9 +48,16 @@ private:
     // ============ 工具函数 ============
     TcpConnectionPtr getUserConnection(const std::string& username);
     void broadcastOnlineUsers();
+
     bool parseMessage(const std::string& msg, std::string& type,
                       std::unordered_map<std::string, std::string>& params);
-    std::string buildResponse(const std::string& type, bool success, const std::string& data = "");
+
+    // 【改动】原来的 buildResponse 已删除，拆成两个职责单一的函数：
+    //   makeResponse —— 只构造 Json::Value，不编码
+    //   sendJson     —— 全项目唯一调用 MessageCodec::encode 的地方
+    Json::Value makeResponse(const std::string& type, bool success,
+                             const std::string& message = "");
+    void sendJson(const TcpConnectionPtr& conn, const Json::Value& v);
 
     TcpServer server_;
     std::unordered_map<std::string, TcpConnectionPtr> online_users_;

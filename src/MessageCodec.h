@@ -11,13 +11,18 @@
 // 协议格式：[4字节 big-endian 长度][payload]
 class MessageCodec {
 public:
-    // 单条消息上限，防止恶意超长长度导致内存爆炸
     static const uint32_t kMaxMessageSize = 1024 * 1024;  // 1MB
 
-    // 编码：把 payload 打包成带长度前缀的字节串
+    // 【改动】用枚举区分"数据没到齐"和"协议错误"
+    enum class DecodeResult {
+        kOk,         // 成功解出一条，out 有效
+        kNeedMore,   // 数据不完整，等下次数据到达
+        kError       // 协议错误（长度非法），调用方应断开连接
+    };
+
     static std::string encode(const std::string& payload) {
-        uint32_t len = static_cast<uint32_t>(payload.size());
-        uint32_t netLen = htonl(len);  // 转网络字节序（大端）
+        uint32_t len    = static_cast<uint32_t>(payload.size());
+        uint32_t netLen = htonl(len);
 
         std::string out;
         out.reserve(4 + payload.size());
@@ -26,36 +31,29 @@ public:
         return out;
     }
 
-    // 解码：从 Buffer 中取出完整消息，返回是否成功
-    // 成功时把消息写入 out，并从 Buffer 中移除已读数据
-    static bool decode(muduo::net::Buffer* buf, std::string& out) {
-        // 至少要能读到 4 字节长度
+    static DecodeResult decode(muduo::net::Buffer* buf, std::string* out) {
         if (buf->readableBytes() < 4) {
-            return false;
+            return DecodeResult::kNeedMore;
         }
 
-        // 读取长度（注意：不消耗缓冲区）
+        // 只 peek 不 retrieve —— 长度非法时不能破坏缓冲区
         uint32_t netLen = 0;
         ::memcpy(&netLen, buf->peek(), 4);
         uint32_t len = ntohl(netLen);
 
-        // 防止恶意长度
-        if (len > kMaxMessageSize) {
-            return false;
+        // 【改动】长度非法：清空缓冲区并报错，否则连接会永久卡死
+        if (len == 0 || len > kMaxMessageSize) {
+            buf->retrieveAll();
+            return DecodeResult::kError;
         }
 
-        // 检查数据是否完整
         if (buf->readableBytes() < 4 + len) {
-            return false;  // 数据不完整，等下次
+            return DecodeResult::kNeedMore;      // 残包留给下次
         }
 
-        // 跳过长度头
         buf->retrieve(4);
-        // 取出消息体
-        out.assign(buf->peek(), len);
-        // 从缓冲区移除
-        buf->retrieve(len);
-        return true;
+        *out = buf->retrieveAsString(len);       // 一步到位，比 assign+retrieve 干净
+        return DecodeResult::kOk;
     }
 };
 
