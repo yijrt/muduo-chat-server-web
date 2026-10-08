@@ -5,10 +5,13 @@
 #include <muduo/net/EventLoop.h>
 #include <muduo/net/InetAddress.h>
 #include <muduo/base/Logging.h>
+
 #include "common.h"
+
 #include <unordered_map>
 #include <mutex>
 #include <string>
+#include <vector>
 
 using namespace muduo;
 using namespace muduo::net;
@@ -18,7 +21,7 @@ public:
     ChatServer(EventLoop* loop, const InetAddress& listenAddr, const std::string& name);
     void start();
 
-    // 提供给 HTTP 服务调用的方法
+    // ============ 给 HTTP 服务调用的接口（返回 bool） ============
     bool handleLogin(const std::string& username, const std::string& password);
     bool handleRegister(const std::string& username, const std::string& password);
     bool handleChat(const std::string& from, const std::string& to, const std::string& content);
@@ -28,19 +31,22 @@ public:
     bool isUserOnline(const std::string& username);
 
 private:
+    // ============ 网络回调 ============
     void onConnection(const TcpConnectionPtr& conn);
     void onMessage(const TcpConnectionPtr& conn, Buffer* buf, Timestamp time);
-    
+
+    // ============ TCP 业务处理（带 conn 参数） ============
     void handleLoginMsg(const TcpConnectionPtr& conn, const std::string& username, const std::string& password);
     void handleRegisterMsg(const TcpConnectionPtr& conn, const std::string& username, const std::string& password);
     void handleChatMsg(const TcpConnectionPtr& conn, const std::string& from, const std::string& to, const std::string& content);
     void handleLogoutMsg(const TcpConnectionPtr& conn, const std::string& username);
     void handleHistoryMsg(const TcpConnectionPtr& conn, const std::string& username, int limit);
-    
+    void handleHeartbeatMsg(const TcpConnectionPtr& conn, const std::string& username);
+
+    // ============ 工具函数 ============
     TcpConnectionPtr getUserConnection(const std::string& username);
     void broadcastOnlineUsers();
-    
-    bool parseMessage(const std::string& msg, std::string& type, 
+    bool parseMessage(const std::string& msg, std::string& type,
                       std::unordered_map<std::string, std::string>& params);
     std::string buildResponse(const std::string& type, bool success, const std::string& data = "");
 

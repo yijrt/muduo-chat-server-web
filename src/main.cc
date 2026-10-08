@@ -14,7 +14,7 @@ int main(int argc, char* argv[]) {
     LOG_INFO << "Starting Chat Server with Web Support...";
     
     // 1. 连接 MySQL
-    if (!Database::getInstance().init("192.168.109.1", "chat", "123456", "chat_db")) {
+    if (!Database::getInstance().init("192.168.139.1", "chat", "123456", "chat_db")) {
         LOG_ERROR << "Failed to connect to MySQL";
         return 1;
     }
