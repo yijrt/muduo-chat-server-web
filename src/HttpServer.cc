@@ -52,20 +52,34 @@ void HttpChatServer::start() {
 }
 
 void HttpChatServer::onHttpRequest(const HttpRequest& req, HttpResponse* resp) {
-    LOG_INFO << "HTTP " << req.methodString() << " " << req.path();
-    
+    // 日志分级：
+    //   /poll 是前端每 2 秒一次的高频轮询，打 INFO 会把日志刷爆，
+    //   并且在排查真实问题时把有用信息冲掉。
+    //   所以只对写操作保留 INFO，读操作降为 DEBUG。
+    //   （muduo 默认级别为 INFO，DEBUG 不输出；
+    //     需要排查时可通过环境变量打开，见 main.cc）
+    const std::string path = req.path();
+    std::string body = extractBody(req);
+
+    // 写操作（会改变服务端状态）→ INFO
+    // 读操作（轮询、查询、静态资源）→ DEBUG
+    // 用白名单判断：以后新增的接口默认走 DEBUG，不会又刷屏
+    const bool isWritePath = (path == "/login" ||
+                              path == "/register" ||
+                              path == "/chat");
+
+    if (isWritePath) {
+        LOG_INFO << "HTTP " << req.methodString() << " " << path;
+    } else {
+        LOG_DEBUG << "HTTP " << req.methodString() << " " << path;
+    }
+
     resp->addHeader("Access-Control-Allow-Origin", "*");
     resp->addHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
     resp->addHeader("Access-Control-Allow-Headers", "Content-Type");
-    
-   /* if (req.method() == muduo::net::HttpRequest::kOptions) {
-        resp->setStatusCode(HttpResponse::k200Ok);
-        return;
-    }*/
-    
-    std::string path = req.path();
-    std::string body = extractBody(req);
-    
+
+    // 注意：这里原来注释掉了 OPTIONS 预检请求的处理（见下方待办）
+
     if (path == "/register") {
         handleRegister(body, resp);
     } else if (path == "/login") {
@@ -80,16 +94,15 @@ void HttpChatServer::onHttpRequest(const HttpRequest& req, HttpResponse* resp) {
         handleUsers(body, resp);
     } else if (path == "/" || path == "/index.html") {
         serveStaticFile("/index.html", resp);
-    } else if (path.find(".html") != std::string::npos || 
-               path.find(".css") != std::string::npos ||
-               path.find(".js") != std::string::npos) {
+    } else if (path.find(".html") != std::string::npos ||
+               path.find(".css")  != std::string::npos ||
+               path.find(".js")   != std::string::npos) {
         serveStaticFile(path, resp);
     } else {
         resp->setStatusCode(HttpResponse::k404NotFound);
         resp->setBody("Not Found");
     }
 }
-
 // ============ API 处理 ============
 
 void HttpChatServer::handleRegister(const std::string& body, HttpResponse* resp) {
