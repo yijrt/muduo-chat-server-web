@@ -2,26 +2,44 @@
 #include "Database.h"
 #include "RedisClient.h"
 #include "MessageCodec.h"
-
 #include <json/json.h>
 
 ChatServer::ChatServer(EventLoop* loop, const InetAddress& listenAddr, const std::string& name)
+    //初始化类型是TcpServer的server_
     : server_(loop, listenAddr, name) {
 
-    server_.setConnectionCallback(
+    server_.setConnectionCallback(          //有/断开连接去调用onconnection
         std::bind(&ChatServer::onConnection, this, std::placeholders::_1)
     );
 
-    server_.setMessageCallback(
+    server_.setMessageCallback(             //是有消息去调用onmassage
         std::bind(&ChatServer::onMessage, this, std::placeholders::_1,
                   std::placeholders::_2, std::placeholders::_3)
     );
 
-    server_.setThreadNum(4);
+    server_.setThreadNum(4);        //设置4个线程（还没有启动）
 }
 
 void ChatServer::start() {
     server_.start();
+/*    
+                    server_.start()
+                    ↓
+                1. 检查是否已经启动（避免重复启动）
+                    ↓
+                2. 启动线程池
+                    └── 创建 4 个 EventLoopThread
+                         └── 每个线程运行一个 EventLoop
+                    ↓
+                3. 启动 Acceptor
+                └── 创建 listen socket
+                └── bind(8888)
+                └── listen()
+                └── 注册到主线程的 epoll（监听可读事件，即有新连接）
+                    ↓
+                4. 主线程 EventLoop 开始循环
+                └── 调用 loop.loop()
+                └── 等待事件*/
     LOG_INFO << "TCP ChatServer started on port 8888";
 }
 
@@ -182,8 +200,8 @@ void ChatServer::onMessage(const TcpConnectionPtr& conn, Buffer* buf, Timestamp 
 void ChatServer::handleLoginMsg(const TcpConnectionPtr& conn,
                                 const std::string& username,
                                 const std::string& password) {
-    Json::Value response;
-    response["type"] = "login";
+    Json::Value response;               //定义一个json类型的变量到时候返回给客户端
+    response["type"] = "login";         //把type设置为login
 
     // 查库放在锁外（userExists / verifyUser 内部自己会加锁）
     if (!Database::getInstance().userExists(username)) {
@@ -217,7 +235,7 @@ void ChatServer::handleLoginMsg(const TcpConnectionPtr& conn,
             loggedIn      = true;
 
             // TODO(P1-1)：这里在锁内做了 MySQL 网络往返，后续要移出临界区
-            unread = Database::getInstance().getUnreadMessages(username);
+            unread = Database::getInstance().getUnreadMessages(username);       //查未读消息
         }
     }   // ← 锁在此释放
 
@@ -225,7 +243,7 @@ void ChatServer::handleLoginMsg(const TcpConnectionPtr& conn,
     if (!unread.empty()) {
         Json::Value arr(Json::arrayValue);
         for (const auto& m : unread) {
-            Json::Value item;                    // 每次循环都新建，不要复用
+            Json::Value item;                    // 每次循环都新建，不要复用,因为append是加入一个指向item的指针
             item["from"]    = m.from_user;
             item["content"] = m.content;
             item["time"]    = m.send_time;
@@ -369,11 +387,11 @@ bool ChatServer::parseMessage(const std::string& msg, std::string& type,
 
     type = root.get("type", "").asString();
     for (const auto& key : root.getMemberNames()) {
-        if (key != "type") {
+        if (key != "type") {                        //除了type键其他全放params
             params[key] = root[key].asString();
         }
     }
-    return !type.empty();
+    return !type.empty();               //必须有type
 }
 
 // ============ 【新增】职责单一的两个工具函数 ============
