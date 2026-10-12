@@ -1,6 +1,6 @@
 CXX = g++
 CXXFLAGS = -std=c++11 -Wall -g -O2 -I./src -I/usr/local/include -I/usr/include/mysql -I/usr/include/jsoncpp
-LDFLAGS = -L/usr/local/lib -lmuduo_net -lmuduo_base -lmuduo_http -lmariadb -lhiredis -ljsoncpp -lpthread -lrt
+LDFLAGS = -L/usr/local/lib -lmuduo_net -lmuduo_base -lmuduo_http -lmariadb -lhiredis -ljsoncpp -lpthread -lrt -lssl -lcrypto
 
 TARGET = chat_server
 SRCDIR = src
